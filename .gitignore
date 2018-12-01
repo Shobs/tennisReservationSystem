@@ -8,10 +8,15 @@
 
 # Log file
 *.log
+/.recommenders/
+.settings
+.metadata
+/bin/
+.classpath
+.project
 
 # BlueJ files
 *.ctxt
-
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
@@ -158,3 +163,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/java,node,osx,windows
+/.metadata/
