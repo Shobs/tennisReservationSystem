@@ -12,7 +12,9 @@ public class Main {
 	
   //  Database credentials
   static final String USER = "root";
-  static final String PASS = "kh062497kh";
+  
+  // PUT YOUR PASSWORD HERE
+  static final String PASS = "....";
   private static Connection conn = null;
   private static Statement statement = null;
   
