@@ -1,0 +1,534 @@
+import java.util.*;
+import java.sql.Timestamp;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.sql.*;
+
+// MAKE SURE TO RUN Driver.java BEFORE RUNNING THIS APPLICATION!
+
+public class Main {
+  static Scanner scanner = new Scanner(System.in);
+  // JDBC driver name and database URL
+  static final String DB_URL = "jdbc:mysql://localhost:3306/cs157a";  
+	
+  //  Database credentials
+  static final String USER = "root";
+  
+  // PUT YOUR PASSWORD HERE
+  static final String PASS = "....";
+  private static Connection conn = null;
+  private static Statement statement = null;
+  
+  static String currentUsername = "";
+  
+  public static void main(String[] args) {
+    startMenu();
+  }
+
+  /**
+   * gets username input from user
+   * @return inputted username
+   */
+  public static String getUsername() {
+      System.out.println("Enter your username: ");
+      String username = scanner.nextLine();
+      return username;
+  }
+
+  /**
+   * gets password input from user
+   * @return inputted password
+   */
+  public static String getPassword() {
+      System.out.println("Enter your password: ");
+      String password = scanner.nextLine();
+      return password;
+  }
+
+  /**
+   * displays login menu
+   */
+  public static void loginMenu() {
+    boolean isValidUser = false;
+      while (!isValidUser) {
+        String username = getUsername();
+        String password = getPassword();
+        username = username.toLowerCase();
+        try {
+        	conn = DriverManager.getConnection(DB_URL, USER, PASS);
+            String selectUserQuery = "SELECT * FROM User WHERE username = ? AND password = ?";
+    	    PreparedStatement userStmt= conn.prepareStatement(selectUserQuery);
+    	    userStmt.setString(1, username);
+    	    userStmt.setString(2, password);
+    	    ResultSet results = userStmt.executeQuery();
+    	    boolean isAdmin = false;
+    	    boolean loggedIn = false;
+    	    while (results.next()) {
+    	    	String name = results.getString("username");
+    	    	String pass = results.getString("password");
+    	    	isAdmin = results.getBoolean("isAdmin");
+    	    	if (name.equals(username) && pass.equals(password)) {
+    	    		currentUsername = name;
+    	    		loggedIn = true;
+    	    		break;
+    	    	}
+    	    }
+    	    if (loggedIn) {
+    	    	isValidUser = true;
+        	    if (isAdmin) {
+        	    	adminMenu();
+        	    } else {
+        	    	userMenu();
+        	    }
+    	    } else {
+    	    	System.out.println("Invaild username or password. Please try again!");	
+    	    }
+        } catch (SQLException e) {
+        	System.out.println(e.getMessage());
+        }
+      }
+  }
+
+  /**
+   * displays signup menu
+   */
+  public static void signupMenu() {
+    boolean isValid = false;
+      while (!isValid) {
+        String username = getUsername();
+        String password = getPassword();
+        username = username.toLowerCase();
+        try {
+        	System.out.println(username + password);
+        	conn = DriverManager.getConnection(DB_URL, USER, PASS);
+        	String insertQuery = "INSERT INTO User(username, password, isAdmin) VALUES (?,?,?)";
+    	    PreparedStatement insertUserStmt= conn.prepareStatement(insertQuery);
+    	    insertUserStmt.setString(1, username);
+    	    insertUserStmt.setString(2, password);
+    	    insertUserStmt.setBoolean(3, true);
+    	    int result = insertUserStmt.executeUpdate();
+    	    if (result > 0) {
+    	    	System.out.println("You have successfully signed up!");
+    	    	isValid = true;
+    	    	loginMenu();
+    	    } else {
+    	    	System.out.println("Username is already taken! Please try again!");
+    	    }
+        } catch (SQLException e) {
+        	System.out.println("Error: " + e.getMessage());
+        }
+      }
+  } 
+
+  /**
+   * displays start menu when user starts application
+   */
+  public static void startMenu() {
+    System.out.println("Hello welcome to Tennis Reservation System.");
+    String input = "";
+    while (!input.equals("L") && !input.equals("S") && !input.equals("X")) {
+      System.out.println("What would you like to do?");
+      System.out.println("L: Log In");
+      System.out.println("S: Sign Up");
+      System.out.println("X: Exit");
+      input = scanner.nextLine();
+    }
+    
+    if (input.equals("L")) {
+      loginMenu();
+    } else if (input.equals("S")) {
+      signupMenu();
+    } else if (input.equals("X")) {
+      System.out.println("Goodbye!");
+    }
+  }
+
+  /**
+   * displays user menu
+ * @throws SQLException 
+   */
+  public static void userMenu() throws SQLException {
+    String input = "";
+    while (!input.equals("M") && !input.equals("S") 
+    && !input.equals("D") && !input.equals("L")) {
+      System.out.println("Hello user. What would you like to do?");
+      System.out.println("C: See all courts at a recreation center.");  // know this before making a reservation
+      System.out.println("R: See all recreation center.");  // know this before making a reservation
+      System.out.println("S: See all reservations.");
+      System.out.println("L: Log out.");
+      input = scanner.nextLine();
+    }
+
+    switch(input) {
+      case "C":
+    	seeAllCourts();
+    	break;
+      case "R":
+    	  seeAllRecreationCenter();
+        break;
+      case "S":
+        seeReservationMenu();			// of that person
+        break;
+      case "L":
+        System.out.println("Goodbye!");
+        startMenu();
+        break;
+      default:
+        System.out.println("Error!");
+    }
+  }
+  
+  public static void seeAllRecreationCenter() throws SQLException
+  {
+	  try
+	  {
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String rec = "SELECT * from RecreationCenter;";
+		  statement = conn.createStatement();
+		  ResultSet rs = statement.executeQuery(rec);
+		  while(rs.next())
+		  {
+		      int id = rs.getInt("recCenterId"); 
+		      String name = rs.getString("name");
+		      int price = rs.getInt("rentalPricePerHour");
+		      System.out.println("recCenterID: " + id + "\tname: " + name + "\tPrice per hour: " + price); 
+		  }
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println("Recreation does not exist");
+	  }
+	  userMenu();
+  }
+  
+  public static void seeAllCourts() throws SQLException
+  {
+	  try
+	  {
+		  System.out.println("which recreation center do you want to check?");
+		  int rec = scanner.nextInt();
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String seeCourts = "SELECT * from tennisCourts where recCenterId = ?;";
+		  PreparedStatement userStmt= conn.prepareStatement(seeCourts);
+		  userStmt.setInt(1, rec);
+		  ResultSet rs = userStmt.executeQuery();
+		  while(rs.next())
+		  {
+		      int id = rs.getInt("tennisCourtId"); 
+		      int recID = rs.getInt("recCenterId");
+		      System.out.println("CourtID: " + id + "\tRecreation: " + recID); 
+		  }
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println("Recreation does not exist");
+	  }
+	  userMenu();
+  }
+  
+  /**
+   * displays all the reservations for the current user
+ * @throws SQLException 
+   */
+  public static void seeReservationMenu() throws SQLException {
+    System.out.println("See all reservations.");
+    String selectUserReservation = "SELECT * FROM Reservation WHERE username = ?";
+    userMenu();
+    // get all reservations from user and display in table format.
+  }
+
+  /**
+   * displays all the users for admin to see
+   */
+  public static void seeAllUserMenu() {
+    // get all users from db and display in table format.
+    System.out.println("username" + "\t\t" + "password");
+    try {
+    	conn = DriverManager.getConnection(DB_URL, USER, PASS);
+    	String selectUsers = "SELECT * FROM User";
+    	Statement userStmt = conn.createStatement();
+    	ResultSet results = userStmt.executeQuery(selectUsers);
+    	while(results.next()) {
+    		String username = results.getString("username");
+    		String password = results.getString("password");
+    		System.out.println(username + "\t\t\t" + password);
+    	}
+    	adminMenu();
+    } catch (SQLException e) {
+    	System.out.println(e.getMessage());
+    }
+  }
+
+  /**
+   * deletes all the users
+   * ???? should we just delete all users that are not admins????
+   */
+  public static void deleteUsers() {
+    System.out.println("Are you sure? (Y/N)");
+    String input = scanner.nextLine();
+    while (!input.equals("Y") && !input.equals("N")) {
+      System.out.println("Invalid input. Please put Y or N.");
+      input = scanner.nextLine();
+    }
+    try {
+        if (input.equals("Y")) {
+            // delete all users.
+        	conn = DriverManager.getConnection(DB_URL, USER, PASS);
+          	String deleteUsers = "DELETE FROM User where isAdmin = false;";
+         }
+         adminMenu();
+    } catch (SQLException e) {
+    	System.out.println(e.getMessage());
+    }
+  }
+
+  /**
+   * displays add tennis court menu
+ * @throws SQLException 
+   */
+  public static void addTennisCourtMenu() throws SQLException {
+    System.out.println("add tennis court menu.");
+    String insertNewTennisCourt = "INSERT INTO TennisCourt(recCenterId, type) VALUES(?,?);";
+    adminMenu();
+  }
+
+  /**
+   * displays admin menu
+ * @throws SQLException 
+   */
+  public static void adminMenu() throws SQLException {
+    System.out.println("Hello admin.");
+    String input = "";
+    while (!input.equals("S") && !input.equals("D")
+    && !input.equals("A") && !input.equals("L")) {
+      System.out.println("C: Change password.");
+      System.out.println("S: See all users.");
+      System.out.println("D: Delete all users.");
+      System.out.println("M: Make a reservation");
+      System.out.println("N: Delete a reservation");
+      System.out.println("T: Delete a tennis court.");
+      System.out.println("A: Add new tennis court.");
+      System.out.println("P: update price per hour of a recreation center.");
+      System.out.println("J: See all payments.");
+      System.out.println("L: Log out.");
+      input = scanner.nextLine();
+    }
+
+    switch(input) {
+      case "C":
+    	changeAdminPassword();
+    	break;
+      case "S":
+        seeAllUserMenu();
+        break;
+      case "D":
+        deleteUsers();
+        break;
+      case "M":
+          makeReservationMenu();
+          break;
+      case "N":
+    	  deleteReservationMenu();		// will delete all reservation of that person
+    	  break;
+      case "A":
+        addTennisCourtMenu();
+        break;
+      case "T":
+    	  deleteTennisCourt();
+    	  break;
+      case "P":
+    	  updatePrice();
+    	  break;
+// there is another requirement that is not in the case here
+// it's called createPayment() below
+      case "J":
+    	  seeAllPayments();
+    	  break;
+      case "L":
+        startMenu();
+        break;
+      default:
+        System.out.println("??");
+    }
+  }
+  
+  /**
+   * displays all reservations and user can choose to delete one
+ * @throws SQLException 
+   */
+  public static void deleteReservationMenu() throws SQLException {
+    
+    try
+	  {
+		  System.out.println("Whats your username?");
+		  String uname = scanner.nextLine();
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String reservation = "delete from Reservation WHERE username = ?";
+		  PreparedStatement userStmt= conn.prepareStatement(reservation);
+		  userStmt.setString(1, uname);
+		  userStmt.executeUpdate();
+		  System.out.println("Deleted reservation.");
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println("Court does not exist");
+	  }
+    
+    adminMenu();
+    
+    // get all reservations from user and display in table format
+  }
+  
+  public static void seeAllPayments() throws SQLException
+  {
+	  try
+	  {
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String rec = "SELECT * from Payment;";
+		  statement = conn.createStatement();
+		  ResultSet rs = statement.executeQuery(rec);
+		  while(rs.next())
+		  {
+		      int id = rs.getInt("paymentId"); 
+		      int cost = rs.getInt("cost");
+		      String method = rs.getString("method");
+		      System.out.println("PaymentID: " + id + "\tCost: " + cost + "\tMethod: " + method);
+		  }
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println(e.getMessage());
+	  }
+	  adminMenu();
+  }
+  
+  /**
+   * displays menu to create reservation
+ * @throws SQLException 
+   */
+  public static void createPayment() throws SQLException
+  {
+	  try
+	  {
+		  System.out.println("PaymentID: ");
+		  int id = scanner.nextInt();
+		  System.out.println("Cost: ");
+		  int cost = scanner.nextInt();
+		  System.out.println("Method: ");
+		  String method = scanner.nextLine();
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String delCourt = "Insert into Payment values (?,?,?);";
+		  PreparedStatement userStmt= conn.prepareStatement(delCourt);
+		  userStmt.setInt(1, id);
+		  userStmt.setInt(2, cost);
+		  userStmt.setString(3, method);
+		  userStmt.executeUpdate();
+		  System.out.println("Inserted payment " + id + " cost: " + cost + " with " + method + " method");
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println(e.getMessage());
+	  }
+	  adminMenu();
+  }
+  
+  public static void makeReservationMenu() throws SQLException {
+	  createPayment();
+    try
+	  {
+		  System.out.println("Fill in the information, username: ");
+		  String name = scanner.nextLine();
+		  System.out.println("courtID: ");
+		  int courtid = scanner.nextInt();
+		  System.out.println("paymentID that you just put in: ");
+		  int paymentid = scanner.nextInt();
+		  Timestamp startTime = new Timestamp(System.currentTimeMillis());
+		  ZonedDateTime zonedDateTime = startTime.toInstant().atZone(ZoneId.of("UTC"));
+		  System.out.println("How long for this court (in minutes)?");
+		  int time = scanner.nextInt();
+		  Timestamp endTime = Timestamp.from(zonedDateTime.plus(time, ChronoUnit.MINUTES).toInstant());
+		  
+		  // done with the input
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String reservation = "INSERT INTO Reservation(username, tennisCourtId, paymentId, reservationTimeStart, reservationTimeEnd) VALUES (?,?,?,?,?);";
+		  PreparedStatement userStmt= conn.prepareStatement(reservation);
+		  userStmt.setString(1, name);
+		  userStmt.setInt(2, courtid);
+		  userStmt.setInt(3, paymentid);
+		  userStmt.setTimestamp(4, startTime);
+		  userStmt.setTimestamp(5, endTime);
+		  userStmt.executeUpdate();
+		  System.out.println("A reservation just made.");
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println(e.getMessage());
+	  }
+    System.out.println("Reservation made!");
+    adminMenu();
+  }
+  public static void deleteTennisCourt() throws SQLException 
+  {
+	  try
+	  {
+		  System.out.println("Which tennis court do you want to delete?");
+		  int court = scanner.nextInt();
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String delCourt = "DELETE FROM TennisCourt WHERE tennisCourtId = ?;";
+		  PreparedStatement userStmt= conn.prepareStatement(delCourt);
+		  userStmt.setInt(1, court);
+		  userStmt.executeUpdate();
+		  System.out.println("Court " + court + " is deleted.");
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println("Court does not exist");
+	  }
+	  adminMenu();
+  }
+  public static void changeAdminPassword() throws SQLException
+  {
+	  try
+	  {
+		  System.out.println("Confirm your username: ");
+		  String uname = scanner.nextLine();
+		  System.out.println("Set a new password: ");
+		  String password = scanner.nextLine();
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String newPassword = "UPDATE user set password = ? where username = ?;";
+		  PreparedStatement userStmt= conn.prepareStatement(newPassword);
+		  userStmt.setString(1, password);
+		  userStmt.setString(2, uname);
+		  userStmt.executeUpdate();
+		  System.out.println("New password of " + uname + " is set to " + password);
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println(e.getMessage());
+	  }
+	  adminMenu();
+  }
+  public static void updatePrice() throws SQLException
+  {
+	  try
+	  {
+		  System.out.println("Which recreation center do you want update the price?");
+		  int rec = scanner.nextInt();
+		  System.out.println("What is the new price per hour?");
+		  int price = scanner.nextInt();
+		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		  String newPrice = "Update RecreationCenter set rentalPricePerHour = ? where recCenterID = ?;";
+		  PreparedStatement userStmt= conn.prepareStatement(newPrice);
+		  userStmt.setInt(1, rec);
+		  userStmt.setInt(2, price);
+		  userStmt.executeUpdate();
+		  System.out.println("new price of recreation " + rec + " is updated to " + price);
+	  }
+	  catch(SQLException e)
+	  {
+		  System.out.println("Recreation center does not exist.");
+	  }
+	  adminMenu();
+  }
+}
