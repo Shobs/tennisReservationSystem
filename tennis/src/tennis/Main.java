@@ -83,7 +83,8 @@ public class Main {
     	    	System.out.println("Invaild username or password. Please try again!");	
     	    }
         } catch (SQLException e) {
-        	System.out.println(e.getMessage());
+//        	System.out.println(e.getMessage());
+        	e.printStackTrace();
         }
       }
   }
@@ -114,7 +115,8 @@ public class Main {
     	    	System.out.println("Username is already taken! Please try again!");
     	    }
         } catch (SQLException e) {
-        	System.out.println("Error: " + e.getMessage());
+//        	System.out.println("Error: " + e.getMessage());
+        	e.printStackTrace();
         }
       }
   } 
@@ -227,7 +229,8 @@ public class Main {
     	}
     	adminMenu();
     } catch (SQLException e) {
-    	System.out.println(e.getMessage());
+//    	System.out.println(e.getMessage());
+    	e.printStackTrace();
     }
   }
 
@@ -250,7 +253,8 @@ public class Main {
          }
          adminMenu();
     } catch (SQLException e) {
-    	System.out.println(e.getMessage());
+//    	System.out.println(e.getMessage());
+    	e.printStackTrace();
     }
   }
 
