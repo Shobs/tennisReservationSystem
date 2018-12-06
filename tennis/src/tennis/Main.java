@@ -18,7 +18,7 @@ public class Main {
   static final String USER = "root";
   
   // PUT YOUR PASSWORD HERE
-  static final String PASS = "kh062497kh";
+  static final String PASS = "...";
   private static Connection conn = null;
   private static Statement statement = null;
   
