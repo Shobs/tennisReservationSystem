@@ -202,4 +202,35 @@ public class Driver {
 	    statement.execute(createTableSQL); 
 	    System.out.println("Table called Archive created successfully...");
 	}
+	
+	private static void createDeleteUserTrigger() throws SQLException
+	{
+		String createTrigger = "CREATE TRIGGER deleteUser "
+				+ "BEFORE DELETE ON USER "
+				+ "FOR EACH ROW "
+				+ "BEGIN "
+				+ "DELETE FROM Reservation WHERE username = old.username;"
+				+ "END;";
+	}
+	
+	private static void createAdminTrigger() throws SQLException
+	{
+		String createTrigger = "CREATE TRIGGER adminSignup "
+				+ "AFTER INSERT ON User "
+				+ "FOR EACH ROW "
+				+ "WHEN new.isAdmin IS TRUE AND (select count(*) FROM User WHERE isAdmin is true) = 5 "
+				+ "BEGIN "
+				+ "UPDATE User SET isAdmin = false WHERE username = new.username; "
+				+ "END;";
+	}
+	
+	private static void createArchiveProcedure() throws SQLException
+	{
+		
+	}
+	
+	private static void createInitialDataSet() throws SQLException
+	{
+		
+	}
 }
