@@ -14,7 +14,7 @@ public class Driver {
 	static final String USER = "root";
 	
 	// PUT YOUR PASSWORD HERE
-	static final String PASS = "....";
+	static final String PASS = "...";
 	private static Connection conn = null;
 	private static Statement statement = null;
 	
@@ -42,7 +42,11 @@ public class Driver {
 			createTennisCourtTable();
 			createReservationTable();
 			createArchiveTable();
-			// get results from executing a sql command
+			
+			// create triggers and procedures
+			createDeleteUserTrigger();
+			createAdminTrigger();
+			createArchiveProcedure();
 		}
 		catch(Exception e)
 		{
@@ -205,27 +209,56 @@ public class Driver {
 	
 	private static void createDeleteUserTrigger() throws SQLException
 	{
+		String deleteTrigger = "DROP TRIGGER IF EXISTS deleteUser";
+		conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		statement = conn.createStatement();
+		statement.executeUpdate(deleteTrigger);
 		String createTrigger = "CREATE TRIGGER deleteUser "
 				+ "BEFORE DELETE ON USER "
 				+ "FOR EACH ROW "
 				+ "BEGIN "
 				+ "DELETE FROM Reservation WHERE username = old.username;"
 				+ "END;";
+		conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		statement = conn.createStatement();
+		statement.executeUpdate(createTrigger);
+		System.out.println("Created delete user trigger!");
 	}
 	
 	private static void createAdminTrigger() throws SQLException
 	{
+		String deleteTrigger = "DROP TRIGGER IF EXISTS adminSignup;";
+		conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		statement = conn.createStatement();
+		statement.executeUpdate(deleteTrigger);
 		String createTrigger = "CREATE TRIGGER adminSignup "
-				+ "AFTER INSERT ON User "
+				+ "BEFORE INSERT ON User "
 				+ "FOR EACH ROW "
-				+ "WHEN new.isAdmin IS TRUE AND (select count(*) FROM User WHERE isAdmin is true) = 5 "
 				+ "BEGIN "
-				+ "UPDATE User SET isAdmin = false WHERE username = new.username; "
+				+ "If new.isAdmin = true AND (select count(*) from User where isAdmin = true) > 5 THEN "
+				+ "SET new.isAdmin = false; "
+				+ "END IF; "
 				+ "END;";
+		statement = conn.createStatement();
+		statement.executeUpdate(createTrigger);
+		System.out.println("Created createAdmin trigger!");
 	}
 	
 	private static void createArchiveProcedure() throws SQLException
 	{
+		String deleteProcedure = "DROP PROCEDURE IF EXISTS archive;";
+		conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		statement = conn.createStatement();
+		statement.executeUpdate(deleteProcedure);
+		String procedure = "CREATE PROCEDURE archive(IN cutOff TIMESTAMP) "
+				+ "BEGIN "
+				+ "INSERT INTO Archive"
+				+ " SELECT * FROM Reservation WHERE updateAt < cutOff; "
+				+ "DELETE FROM Reservation WHERE updateAt < cutOff; "
+				+ "END;";
+		statement = conn.createStatement();
+		statement.executeUpdate(procedure);
+		System.out.println("created archive procedure!");
 		
 	}
 	

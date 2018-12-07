@@ -108,7 +108,6 @@ public class Main {
         String password = getPassword();
         username = username.toLowerCase();
         try {
-        	System.out.println(username + password);
         	conn = DriverManager.getConnection(DB_URL, USER, PASS);
         	String insertQuery = "INSERT INTO User(username, password, isAdmin) VALUES (?,?,?)";
     	    PreparedStatement insertUserStmt= conn.prepareStatement(insertQuery);
@@ -340,6 +339,7 @@ public class Main {
     	conn = DriverManager.getConnection(DB_URL, USER, PASS);
         System.out.println("Which recreation center?");
         ArrayList<Integer> recCenterIds = showRecreationCenters();
+        System.out.println(recCenterIds.toString());
         int recCenter = scanner.nextInt();
         while (!recCenterIds.contains(recCenter)) {
         	System.out.println("rec center not found, try again.");
@@ -562,13 +562,15 @@ public class Main {
 		  
 		  // done with the input
 		  conn = DriverManager.getConnection(DB_URL, USER, PASS);
-		  String reservation = "INSERT INTO Reservation(username, tennisCourtId, paymentId, reservationTimeStart, reservationTimeEnd) VALUES (?,?,?,?,?);";
+		  String reservation = "INSERT INTO Reservation(username, tennisCourtId, paymentId, reservationTimeStart, reservationTimeEnd, updateAt) "
+		  		+ "VALUES (?,?,?,?,?,?);";
 		  PreparedStatement userStmt= conn.prepareStatement(reservation);
 		  userStmt.setString(1, name);
 		  userStmt.setInt(2, courtid);
 		  userStmt.setInt(3, paymentid);
 		  userStmt.setTimestamp(4, startTime);
 		  userStmt.setTimestamp(5, endTime);
+		  userStmt.setTimestamp(6, startTime);
 		  userStmt.executeUpdate();
 		  System.out.println("A reservation just made.");
 	  }
