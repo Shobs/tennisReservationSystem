@@ -413,13 +413,14 @@ public class Main {
 	public static void adminMenu() throws SQLException {
 		System.out.println("Hello admin.");
 		String input = "";
-		while (!input.equals("S") && !input.equals("D")
+		while (!input.equals("S") && !input.equals("D") && !input.equals("R")
 		 && !input.equals("A") && !input.equals("L") && !input.equals("C")
 		 && !input.equals("M") && !input.equals("T") && !input.equals("N")
 		 && !input.equals("P") && !input.equals("J") && !input.equals("H") ) {
 			System.out.println("C: Change password.");
 			System.out.println("S: See all users.");
 			System.out.println("H: See all users who have never made a reservation.");
+			System.out.println("R: See all recreation centers with no future reservations.");
 			System.out.println("D: Delete all users.");
 			System.out.println("M: Make a reservation");
 			System.out.println("N: Delete a reservation");
@@ -440,6 +441,9 @@ public class Main {
 				break;
 			case "H":
 				seeNonReservationUsers();
+				break;
+			case "R":
+				showNonReservationRecreationCenters();
 				break;
 			case "D":
 				deleteUsers();
@@ -469,6 +473,8 @@ public class Main {
 				System.out.println("??");
 		}
 	}
+
+
 
 	/**
 	 * displays all reservations and admin can choose to delete one
@@ -742,6 +748,34 @@ public class Main {
 		}
 		return recCenterIds;
 
+	}
+
+	/**
+	 * Prints recreation centers that have no future reservations
+	 */
+	public static void showNonReservationRecreationCenters() {
+		try {
+			String sql =
+			 "SELECT name, RecreationCenter.recCenterId\n"
+			 + "FROM Reservation \n"
+			 + "INNER JOIN TennisCourt USING(tennisCourtId)\n"
+			 + "RIGHT JOIN RecreationCenter \n"
+			 + "ON RecreationCenter.recCenterId = TennisCourt.recCenterId\n"
+			 + "GROUP BY RecreationCenter.recCenterId, RecreationCenter.recCenterId\n"
+			 + "HAVING count(Reservation.reservationId) = 0\n";
+			statement = conn.createStatement();
+			ResultSet rcResults = statement.executeQuery(sql);
+			while(rcResults.next()) {
+				StringBuilder sb = new StringBuilder()
+				 .append("Recreation Center ID: ")
+				 .append(rcResults.getString("recCenterId"))
+				 .append(", Recreation Center Name: ")
+				 .append(rcResults.getString("name"));
+        		System.out.println(sb.toString());
+			}
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
 	}
 
 	/**
