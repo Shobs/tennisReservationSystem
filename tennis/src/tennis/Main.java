@@ -18,7 +18,7 @@ public class Main {
 	static final String USER = "root";
 
 	// PUT YOUR PASSWORD HERE
-	static final String PASS = "...";
+	static final String PASS = "kh062497kh";
 	private static Connection conn = null;
 	private static Statement statement = null;
 
@@ -27,11 +27,17 @@ public class Main {
 	static Map<String, String> types = new HashMap<>();
 
 	public static void main(String[] args) {
-		// initialize map to hold three different types of tennis courts.
-		types.put("A", "Grass");
-		types.put("B", "Hard");
-		types.put("C", "Sand");
-		startMenu();
+		// initialize connection
+		try {
+			conn = DriverManager.getConnection(DB_URL, USER, PASS);
+			// initialize map to hold three different types of tennis courts.
+			types.put("A", "Grass");
+			types.put("B", "Hard");
+			types.put("C", "Sand");
+			startMenu();
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
 	}
 
 	/**
@@ -64,7 +70,6 @@ public class Main {
 			String password = getPassword();
 			username = username.toLowerCase();
 			try {
-				conn = DriverManager.getConnection(DB_URL, USER, PASS);
 				String selectUserQuery = "SELECT * FROM User WHERE username = ? AND password = ?";
 				PreparedStatement userStmt= conn.prepareStatement(selectUserQuery);
 				userStmt.setString(1, username);
@@ -108,7 +113,6 @@ public class Main {
 			String password = getPassword();
 			username = username.toLowerCase();
 			try {
-				conn = DriverManager.getConnection(DB_URL, USER, PASS);
 				String insertQuery = "INSERT INTO User(username, password, isAdmin) VALUES (?,?,?)";
 				PreparedStatement insertUserStmt= conn.prepareStatement(insertQuery);
 				insertUserStmt.setString(1, username);
@@ -158,12 +162,13 @@ public class Main {
 	public static void userMenu() throws SQLException {
 		String input = "";
 		while (!input.equals("C") && !input.equals("L")
-		 && !input.equals("R") && !input.equals("F") && !input.equals("P")) {
+		 && !input.equals("R") && !input.equals("F") && !input.equals("P") && !input.equals("M")) {
 			System.out.println("Hello user. What would you like to do?");
 			System.out.println("C: See all courts at a recreation center.");  // know this before making a reservation
 			System.out.println("R: See all recreation center.");  // know this before making a reservation
 			System.out.println("F: See all future reservations.");
 			System.out.println("P: See all past reservations.");
+			System.out.println("M: Make a reservation.");
 			System.out.println("L: Log out.");
 			input = scanner.nextLine();
 		}
@@ -185,6 +190,9 @@ public class Main {
 				System.out.println("Goodbye!");
 				startMenu();
 				break;
+			case "M":
+				makeReservationMenu(true);
+				break;
 			default:
 				System.out.println("Error!");
 		}
@@ -198,7 +206,6 @@ public class Main {
 	{
 		try
 		{
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
 			String rec = "SELECT * from RecreationCenter;";
 			statement = conn.createStatement();
 			ResultSet rs = statement.executeQuery(rec);
@@ -235,7 +242,6 @@ public class Main {
 				rec = scanner.nextInt();
 			}
 			scanner.nextLine();
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
 			String seeCourts = "SELECT * from tennisCourt where recCenterId = ?;";
 			PreparedStatement userStmt= conn.prepareStatement(seeCourts);
 			userStmt.setInt(1, rec);
@@ -261,7 +267,6 @@ public class Main {
 	 */
 	public static void seeReservationMenu(boolean future) throws SQLException {
 		try {
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
 			String table = future ? "Reservation" : "Archive";
 			String selectUserReservation =
 			 "SELECT * FROM " + table + " JOIN Payment ON "
@@ -272,10 +277,12 @@ public class Main {
 			while(results.next()) {
 				int reservationId = results.getInt("reservationId");
 				int tennisCourtId = results.getInt("tennisCourtId");
+				String startTime = results.getTime("reservationTimeStart").toString();
+				String endTime = results.getTime("reservationTimeEnd").toString();
 				int cost = results.getInt("cost");
 				String method = results.getString("method");
 				String message = "Reservation ID: " + reservationId + "  Tennis Court: " + tennisCourtId +
-				 "  Cost: " + cost + "  Method: " + method;
+				 "  Cost: " + cost + "  Method: " + method + "  Start: " + startTime + "  End: " + endTime;
 				System.out.println(message);
 			}
 		} catch (SQLException e) {
@@ -290,14 +297,12 @@ public class Main {
 	public static void seeAllUserMenu() {
 		// get all users from db and display in table format.
 		try {
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
-			String selectUsers = "SELECT * FROM User";
+			String selectUsers = "SELECT username FROM User where isAdmin = false;";
 			Statement userStmt = conn.createStatement();
 			ResultSet results = userStmt.executeQuery(selectUsers);
 			while(results.next()) {
 				String username = results.getString("username");
-				String password = results.getString("password");
-				String message = "Username: " + username + "  Password: " + password;
+				String message = "Username: " + username;
 				System.out.println(message);
 			}
 			adminMenu();
@@ -311,7 +316,6 @@ public class Main {
 	 */
 	public static void seeNonReservationUsers() {
 		try {
-		conn = DriverManager.getConnection(DB_URL, USER, PASS);
 		String sql =
 		 "SELECT username FROM User T1 WHERE username != ALL ("
 		  + " SELECT username FROM Archive WHERE username = T1.username"
@@ -342,7 +346,6 @@ public class Main {
 		try {
 			if (input.equals("Y")) {
 				// delete all users.
-				conn = DriverManager.getConnection(DB_URL, USER, PASS);
 				String deleteUsers = "DELETE FROM User where isAdmin = false;";
 				statement = conn.createStatement();
 				int result = statement.executeUpdate(deleteUsers);
@@ -365,7 +368,6 @@ public class Main {
 	public static void addTennisCourtMenu() throws SQLException {
 		// show all recreation centers here
 		try {
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
 			System.out.println("Which recreation center?");
 			ArrayList<Integer> recCenterIds = showRecreationCenters();
 			System.out.println(recCenterIds.toString());
@@ -416,7 +418,7 @@ public class Main {
 		while (!input.equals("S") && !input.equals("D") && !input.equals("R")
 		 && !input.equals("A") && !input.equals("L") && !input.equals("C")
 		 && !input.equals("M") && !input.equals("T") && !input.equals("N")
-		 && !input.equals("P") && !input.equals("J") && !input.equals("H") ) {
+		 && !input.equals("P") && !input.equals("J") && !input.equals("H") && !input.equals("I") ) {
 			System.out.println("C: Change password.");
 			System.out.println("S: See all users.");
 			System.out.println("H: See all users who have never made a reservation.");
@@ -428,6 +430,7 @@ public class Main {
 			System.out.println("A: Add new tennis court.");
 			System.out.println("P: update price per hour of a recreation center.");
 			System.out.println("J: See all payments.");
+			System.out.println("I: Archive reservations.");
 			System.out.println("L: Log out.");
 			input = scanner.nextLine();
 		}
@@ -449,7 +452,7 @@ public class Main {
 				deleteUsers();
 				break;
 			case "M":
-				makeReservationMenu();
+				makeReservationMenu(false);
 				break;
 			case "N":
 				deleteReservationMenu();		// will delete all reservation of that person
@@ -466,6 +469,9 @@ public class Main {
 			case "J":
 				seeAllPayments();
 				break;
+			case "I":
+				callProcedure();
+				break;
 			case "L":
 				startMenu();
 				break;
@@ -473,8 +479,14 @@ public class Main {
 				System.out.println("??");
 		}
 	}
-
-
+	
+	public static void callProcedure() throws SQLException {
+		CallableStatement cstmt = conn.prepareCall("{call archive(?)}");
+		Timestamp curentTime = new Timestamp(System.currentTimeMillis());
+		cstmt.setTimestamp(1, curentTime);
+		System.out.println("Data successfully archived.");
+		adminMenu();
+	}
 
 	/**
 	 * displays all reservations and admin can choose to delete one
@@ -497,7 +509,6 @@ public class Main {
 					reservationId = scanner.nextInt();
 				}
 				scanner.nextLine();
-				conn = DriverManager.getConnection(DB_URL, USER, PASS);
 				String reservation = "delete from Reservation WHERE reservationId = ?";
 				PreparedStatement userStmt= conn.prepareStatement(reservation);
 				userStmt.setInt(1, reservationId);
@@ -521,7 +532,6 @@ public class Main {
 	{
 		try
 		{
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
 			String rec = "SELECT * from Payment;";
 			statement = conn.createStatement();
 			ResultSet rs = statement.executeQuery(rec);
@@ -541,84 +551,84 @@ public class Main {
 	}
 
 	/**
-	 * displays menu to create reservation
+	 * makes a reservation for a user
+	 * @param isUser - boolean to determine whether this reservation is made from a user or from an admin
+	 * (NOTE: admins make reservations, not a user, so you need to input the user's username, not the admin)
 	 * @throws SQLException
 	 */
-	public static void createPayment(boolean fromReservation) throws SQLException
-	{
+	public static void makeReservationMenu(boolean isUser) throws SQLException {
+		int paymentId = 0;
+		String name = "";
 		try
 		{
-			System.out.println("PaymentID: ");
-			int id = scanner.nextInt();
-			scanner.nextLine();
+			System.out.println("Enter payment method: ");
 			System.out.println("Cost: ");
 			int cost = scanner.nextInt();
 			scanner.nextLine();
 			System.out.println("Method: ");
 			String method = scanner.nextLine();
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
-			String delCourt = "Insert into Payment values (?,?,?);";
-			PreparedStatement userStmt= conn.prepareStatement(delCourt);
-			userStmt.setInt(1, id);
-			userStmt.setInt(2, cost);
-			userStmt.setString(3, method);
-			userStmt.executeUpdate();
-			System.out.println("Inserted payment " + id + " cost: " + cost + " with " + method + " method");
+			String delCourt = "Insert into Payment (cost, method) values (?,?);";
+			PreparedStatement paymentStmt= conn.prepareStatement(delCourt, Statement.RETURN_GENERATED_KEYS);
+			paymentStmt.setInt(1, cost);
+			paymentStmt.setString(2, method);
+			paymentStmt.executeUpdate();
+			ResultSet generatedKeys = paymentStmt.getGeneratedKeys();
+			if (generatedKeys.next()) {
+				paymentId = generatedKeys.getInt(1);
+			}
+			if (paymentId == 0) {
+				System.out.println("An error occurred!");
+			} else {
+				if (isUser) {
+					name = currentUsername;
+				} else {
+					System.out.println("Fill in the username of the user: ");
+					name = scanner.nextLine();
+				}
+				System.out.println("courtID: ");
+				ArrayList<Integer> tennisCourtIds = showAllTennisCourts();
+				System.out.println(tennisCourtIds.toString());
+				int courtid = scanner.nextInt();
+				while (!tennisCourtIds.contains(courtid)) {
+					System.out.println("Invalid tennis court. Please enter one in the list.");
+					System.out.println(tennisCourtIds.toString());
+					courtid = scanner.nextInt();
+				}
+				scanner.nextLine();
+				Timestamp startTime = new Timestamp(System.currentTimeMillis());
+				ZonedDateTime zonedDateTime = startTime.toInstant().atZone(ZoneId.of("UTC"));
+				System.out.println("How long for this court (in minutes)?");
+				int time = scanner.nextInt();
+				scanner.nextLine();
+				Timestamp endTime = Timestamp.from(zonedDateTime.plus(time, ChronoUnit.MINUTES).toInstant());
+				boolean isValid = isValidTime(courtid, startTime, endTime);
+				if (isValid) {
+					String reservation = "INSERT INTO Reservation(username, tennisCourtId, paymentId, reservationTimeStart, reservationTimeEnd, updateAt) "
+							 + "VALUES (?,?,?,?,?,?);";
+							PreparedStatement resStmt= conn.prepareStatement(reservation);
+							resStmt.setString(1, name);
+							resStmt.setInt(2, courtid);
+							resStmt.setInt(3, paymentId);
+							resStmt.setTimestamp(4, startTime);
+							resStmt.setTimestamp(5, endTime);
+							resStmt.setTimestamp(6, startTime);
+							resStmt.executeUpdate();
+							System.out.println("A reservation just made.");
+				} else {
+					System.out.println("ERROR: There is already a reservation made between the times you entered.");
+					System.out.println("Please try again later.");
+				}
+			}
 		}
 		catch(SQLException e)
 		{
 			System.out.println(e.getMessage());
 		}
-		if (!fromReservation) {
+		if (isUser) {
+			userMenu();
+		} else {
 			adminMenu();
 		}
-	}
-
-	/**
-	 * makes a reservation for a user
-	 * (NOTE: admins make reservations, not a user, so you need to input the user's username, not the admin)
-	 * @throws SQLException
-	 */
-	public static void makeReservationMenu() throws SQLException {
-		// first create a new payment for the user
-		createPayment(true);
-		try
-		{
-			System.out.println("Fill in the information, username: ");
-			String name = scanner.nextLine();
-			System.out.println("courtID: ");
-			int courtid = scanner.nextInt();
-			scanner.nextLine();
-			System.out.println("paymentID that you just put in: ");
-			int paymentid = scanner.nextInt();
-			scanner.nextLine();
-			Timestamp startTime = new Timestamp(System.currentTimeMillis());
-			ZonedDateTime zonedDateTime = startTime.toInstant().atZone(ZoneId.of("UTC"));
-			System.out.println("How long for this court (in minutes)?");
-			int time = scanner.nextInt();
-			scanner.nextLine();
-			Timestamp endTime = Timestamp.from(zonedDateTime.plus(time, ChronoUnit.MINUTES).toInstant());
-
-			// done with the input
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
-			String reservation = "INSERT INTO Reservation(username, tennisCourtId, paymentId, reservationTimeStart, reservationTimeEnd, updateAt) "
-			 + "VALUES (?,?,?,?,?,?);";
-			PreparedStatement userStmt= conn.prepareStatement(reservation);
-			userStmt.setString(1, name);
-			userStmt.setInt(2, courtid);
-			userStmt.setInt(3, paymentid);
-			userStmt.setTimestamp(4, startTime);
-			userStmt.setTimestamp(5, endTime);
-			userStmt.setTimestamp(6, startTime);
-			userStmt.executeUpdate();
-			System.out.println("A reservation just made.");
-		}
-		catch(SQLException e)
-		{
-			System.out.println(e.getMessage());
-		}
-		System.out.println("Reservation made!");
-		adminMenu();
 	}
 
 	/**
@@ -632,23 +642,26 @@ public class Main {
 			System.out.println("NOTE: Some tennis courts may not show up because those are currently being reserved");
 			System.out.println("Which tennis court do you want to delete?");
 			ArrayList<Integer> tennisCourtIds = showNonReservedTennisCourts();
-			System.out.println(tennisCourtIds.toString());
-			int court = scanner.nextInt();
-			while (!tennisCourtIds.contains(court)) {
-				System.out.println("Invalid tennis court! Try again.");
-				System.out.println(tennisCourtIds.toString());
-				court = scanner.nextInt();
-			}
-			scanner.nextLine();
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
-			String delCourt = "DELETE FROM TennisCourt WHERE tennisCourtId = ?;";
-			PreparedStatement delCourtStmt= conn.prepareStatement(delCourt);
-			delCourtStmt.setInt(1, court);
-			int results = delCourtStmt.executeUpdate();
-			if (results > 0) {
-				System.out.println("Court " + court + " is deleted.");
+			if (tennisCourtIds.size() == 0) {
+				System.out.println("All courts are currently being reserved.");
 			} else {
-				System.out.println("An error has occurred!");
+				System.out.println(tennisCourtIds.toString());
+				int court = scanner.nextInt();
+				while (!tennisCourtIds.contains(court)) {
+					System.out.println("Invalid tennis court! Try again.");
+					System.out.println(tennisCourtIds.toString());
+					court = scanner.nextInt();
+				}
+				scanner.nextLine();
+				String delCourt = "DELETE FROM TennisCourt WHERE tennisCourtId = ?;";
+				PreparedStatement delCourtStmt= conn.prepareStatement(delCourt);
+				delCourtStmt.setInt(1, court);
+				int results = delCourtStmt.executeUpdate();
+				if (results > 0) {
+					System.out.println("Court " + court + " is deleted.");
+				} else {
+					System.out.println("An error has occurred!");
+				}
 			}
 		}
 		catch(SQLException e)
@@ -670,7 +683,6 @@ public class Main {
 			String uname = scanner.nextLine();
 			System.out.println("Set a new password: ");
 			String password = scanner.nextLine();
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
 			String newPassword = "UPDATE user set password = ? where username = ?;";
 			PreparedStatement userStmt= conn.prepareStatement(newPassword);
 			userStmt.setString(1, password);
@@ -710,7 +722,6 @@ public class Main {
 			System.out.println("What is the new price per hour?");
 			int price = scanner.nextInt();
 			scanner.nextLine();
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
 			String newPrice = "UPDATE RecreationCenter SET rentalPricePerHour = ? WHERE recCenterId = ?;";
 			PreparedStatement priceStmt= conn.prepareStatement(newPrice);
 			priceStmt.setInt(1, price);
@@ -753,7 +764,7 @@ public class Main {
 	/**
 	 * Prints recreation centers that have no future reservations
 	 */
-	public static void showNonReservationRecreationCenters() {
+	public static void showNonReservationRecreationCenters() throws SQLException {
 		try {
 			String sql =
 			 "SELECT name, RecreationCenter.recCenterId\n"
@@ -776,6 +787,7 @@ public class Main {
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
+		adminMenu();
 	}
 
 	/**
@@ -805,7 +817,52 @@ public class Main {
 	public static ArrayList<Integer> showNonReservedTennisCourts() {
 		ArrayList<Integer> tennisCourtIds = new ArrayList<>();
 		try {
-			String tennisCourtStmt = "SELECT tennisCourtId FROM tennisCourtId WHERE tennisCourtId NOT IN (SELECT tennisCourtId FROM Reservation);";
+			String tennisCourtStmt = "SELECT tennisCourtId FROM tennisCourt WHERE tennisCourtId NOT IN (SELECT tennisCourtId FROM Reservation);";
+			statement = conn.createStatement();
+			ResultSet tennisResults = statement.executeQuery(tennisCourtStmt);
+			while (tennisResults.next()) {
+				tennisCourtIds.add(tennisResults.getInt("tennisCourtId"));
+			}
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+		return tennisCourtIds;
+	}
+	
+	/**
+	 * helper method to check if a reservation that is about to be made does not overlap with other times 
+	 * @return
+	 */
+	public static boolean isValidTime(int tennisCourtId, Timestamp startTime, Timestamp endTime) {
+		boolean isValid = false;
+		try {
+			String stmt = "SELECT count(*) FROM Reservation WHERE reservationTimeStart < ? AND (reservationTimeEnd < ? or "
+					+ "reservationTimeEnd > ?) and tennisCourtId = ?;";
+			PreparedStatement statement = conn.prepareStatement(stmt);
+			statement.setTimestamp(1,  startTime);
+			statement.setTimestamp(2,  endTime);
+			statement.setTimestamp(3, endTime);
+			statement.setInt(4, tennisCourtId);
+			ResultSet set = statement.executeQuery();
+			if (set.next()) {
+				/*
+				 * 0 means that there are no reservations that are within the start/end time (which is valid)
+				 */
+				isValid = set.getInt(1) == 0 ? true : false;
+			}
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+		return isValid;
+	}
+	
+	/**
+	 * helper method to get all the tennis court ids in the database
+	 */
+	public static ArrayList<Integer> showAllTennisCourts() {
+		ArrayList<Integer> tennisCourtIds = new ArrayList<>();
+		try {
+			String tennisCourtStmt = "SELECT tennisCourtId FROM tennisCourt;";
 			statement = conn.createStatement();
 			ResultSet tennisResults = statement.executeQuery(tennisCourtStmt);
 			while (tennisResults.next()) {
