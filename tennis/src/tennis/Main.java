@@ -560,65 +560,71 @@ public class Main {
 	public static void makeReservationMenu(boolean isUser) throws SQLException {
 		int paymentId = 0;
 		String name = "";
+		int cost = 0;
+		String method = "";
 		try
 		{
 			System.out.println("Enter payment method: ");
-			System.out.println("Cost: ");
-			int cost = scanner.nextInt();
-			scanner.nextLine();
-			System.out.println("Method: ");
-			String method = scanner.nextLine();
-			String delCourt = "Insert into Payment (cost, method) values (?,?);";
-			PreparedStatement paymentStmt= conn.prepareStatement(delCourt, Statement.RETURN_GENERATED_KEYS);
-			paymentStmt.setInt(1, cost);
-			paymentStmt.setString(2, method);
-			paymentStmt.executeUpdate();
-			ResultSet generatedKeys = paymentStmt.getGeneratedKeys();
-			if (generatedKeys.next()) {
-				paymentId = generatedKeys.getInt(1);
-			}
-			if (paymentId == 0) {
-				System.out.println("An error occurred!");
+			method = scanner.nextLine();
+			if (isUser) {
+				name = currentUsername;
 			} else {
-				if (isUser) {
-					name = currentUsername;
-				} else {
-					System.out.println("Fill in the username of the user: ");
-					name = scanner.nextLine();
-				}
-				System.out.println("courtID: ");
-				ArrayList<Integer> tennisCourtIds = showAllTennisCourts();
+				System.out.println("Fill in the username of the user: ");
+				name = scanner.nextLine();
+			}
+			System.out.println("courtID: ");
+			ArrayList<Integer> tennisCourtIds = showAllTennisCourts();
+			System.out.println(tennisCourtIds.toString());
+			int courtid = scanner.nextInt();
+			while (!tennisCourtIds.contains(courtid)) {
+				System.out.println("Invalid tennis court. Please enter one in the list.");
 				System.out.println(tennisCourtIds.toString());
-				int courtid = scanner.nextInt();
-				while (!tennisCourtIds.contains(courtid)) {
-					System.out.println("Invalid tennis court. Please enter one in the list.");
-					System.out.println(tennisCourtIds.toString());
-					courtid = scanner.nextInt();
+				courtid = scanner.nextInt();
+			}
+			scanner.nextLine();
+			String rentalPriceSQL = "SELECT rentalPricePerHour FROM RecreationCenter inner join TennisCourt USING (recCenterId) "
+					+ "WHERE TennisCourt.tennisCourtId = " + courtid;
+			statement = conn.createStatement();
+			int rentalPrice = 0;
+			ResultSet rentalPriceResults = statement.executeQuery(rentalPriceSQL);
+			if (rentalPriceResults.next()) {
+				rentalPrice = rentalPriceResults.getInt(1);
+			}
+			Timestamp startTime = new Timestamp(System.currentTimeMillis());
+			ZonedDateTime zonedDateTime = startTime.toInstant().atZone(ZoneId.of("UTC"));
+			System.out.println("How long for this court (in minutes)?");
+			int time = scanner.nextInt();
+			scanner.nextLine();
+			Timestamp endTime = Timestamp.from(zonedDateTime.plus(time, ChronoUnit.MINUTES).toInstant());
+			boolean isValid = isValidTime(courtid, startTime, endTime);
+			if (isValid) {
+				// calculate cost based on minutes and rental price
+				cost = (int)Math.round(( (double)rentalPrice / 60.0) * (double)time);
+				
+				// insert payment entry first then get the new id and then use it for reservation insertion
+				String insertPayment = "Insert into Payment (cost, method) values (?,?);";
+				PreparedStatement paymentStmt = conn.prepareStatement(insertPayment, Statement.RETURN_GENERATED_KEYS);
+				paymentStmt.setInt(1, cost);
+				paymentStmt.setString(2, method);
+				paymentStmt.executeUpdate();
+				ResultSet generatedKeys = paymentStmt.getGeneratedKeys();
+				if (generatedKeys.next()) {
+					paymentId = generatedKeys.getInt(1);
 				}
-				scanner.nextLine();
-				Timestamp startTime = new Timestamp(System.currentTimeMillis());
-				ZonedDateTime zonedDateTime = startTime.toInstant().atZone(ZoneId.of("UTC"));
-				System.out.println("How long for this court (in minutes)?");
-				int time = scanner.nextInt();
-				scanner.nextLine();
-				Timestamp endTime = Timestamp.from(zonedDateTime.plus(time, ChronoUnit.MINUTES).toInstant());
-				boolean isValid = isValidTime(courtid, startTime, endTime);
-				if (isValid) {
-					String reservation = "INSERT INTO Reservation(username, tennisCourtId, paymentId, reservationTimeStart, reservationTimeEnd, updateAt) "
-							 + "VALUES (?,?,?,?,?,?);";
-							PreparedStatement resStmt= conn.prepareStatement(reservation);
-							resStmt.setString(1, name);
-							resStmt.setInt(2, courtid);
-							resStmt.setInt(3, paymentId);
-							resStmt.setTimestamp(4, startTime);
-							resStmt.setTimestamp(5, endTime);
-							resStmt.setTimestamp(6, startTime);
-							resStmt.executeUpdate();
-							System.out.println("A reservation just made.");
-				} else {
-					System.out.println("ERROR: There is already a reservation made between the times you entered.");
-					System.out.println("Please try again later.");
-				}
+				String reservation = "INSERT INTO Reservation(username, tennisCourtId, paymentId, reservationTimeStart, reservationTimeEnd, updateAt) "
+						+ "VALUES (?,?,?,?,?,?);";
+				PreparedStatement resStmt = conn.prepareStatement(reservation);
+				resStmt.setString(1, name);
+				resStmt.setInt(2, courtid);
+				resStmt.setInt(3, paymentId);
+				resStmt.setTimestamp(4, startTime);
+				resStmt.setTimestamp(5, endTime);
+				resStmt.setTimestamp(6, startTime);
+				resStmt.executeUpdate();
+				System.out.println("A reservation just made.");
+			} else {
+				System.out.println("ERROR: There is already a reservation made between the times you entered.");
+				System.out.println("Please try again later.");
 			}
 		}
 		catch(SQLException e)
