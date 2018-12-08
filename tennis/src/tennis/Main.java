@@ -175,8 +175,8 @@ public class Main {
 			case "R":
 				seeAllRecreationCenter();
 				break;
-			  case "F":
-      seeReservationMenu(true);
+			case "F":
+				seeReservationMenu(true);
 				break;
 			case "P":
 				seeReservationMenu(false);
@@ -307,6 +307,28 @@ public class Main {
 	}
 
 	/**
+	 * displays users who have never made a reservation
+	 */
+	public static void seeNonReservationUsers() {
+		try {
+		conn = DriverManager.getConnection(DB_URL, USER, PASS);
+		String sql =
+		 "SELECT username FROM User T1 WHERE username != ALL ("
+		  + " SELECT username FROM Archive WHERE username = T1.username"
+		  + " UNION SELECT username FROM Reservation WHERE username = T1.username)";
+		Statement userStmt = conn.createStatement();
+		ResultSet results = userStmt.executeQuery(sql);
+		while(results.next()) {
+			String username = results.getString("username");
+        System.out.println("Username: " + username);
+		}
+		adminMenu();
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+	}
+
+	/**
 	 * admins can delete all users that are non-admins
 	 * this will also activate a trigger to delete all reservations made from deleted users
 	 */
@@ -394,9 +416,10 @@ public class Main {
 		while (!input.equals("S") && !input.equals("D")
 		 && !input.equals("A") && !input.equals("L") && !input.equals("C")
 		 && !input.equals("M") && !input.equals("T") && !input.equals("N")
-		 && !input.equals("P") && !input.equals("J")) {
+		 && !input.equals("P") && !input.equals("J") && !input.equals("H") ) {
 			System.out.println("C: Change password.");
 			System.out.println("S: See all users.");
+			System.out.println("H: See all users who have never made a reservation.");
 			System.out.println("D: Delete all users.");
 			System.out.println("M: Make a reservation");
 			System.out.println("N: Delete a reservation");
@@ -414,6 +437,9 @@ public class Main {
 				break;
 			case "S":
 				seeAllUserMenu();
+				break;
+			case "H":
+				seeNonReservationUsers();
 				break;
 			case "D":
 				deleteUsers();
