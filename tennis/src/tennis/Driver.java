@@ -253,8 +253,8 @@ public class Driver {
 		String procedure = "CREATE PROCEDURE archive(IN cutOff TIMESTAMP) "
 				+ "BEGIN "
 				+ "INSERT INTO Archive"
-				+ " SELECT * FROM Reservation WHERE updateAt < cutOff; "
-				+ "DELETE FROM Reservation WHERE updateAt < cutOff; "
+				+ " SELECT * FROM Reservation WHERE reservationTimeEnd < cutOff; "
+				+ "DELETE FROM Reservation WHERE reservationTimeEnd < cutOff; "
 				+ "END;";
 		statement = conn.createStatement();
 		statement.executeUpdate(procedure);
