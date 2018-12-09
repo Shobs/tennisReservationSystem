@@ -1,11 +1,9 @@
-package tennis;
-
 import java.util.*;
 import java.sql.Timestamp;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.sql.*;
+import java.util.regex.Pattern;
 
 // MAKE SURE TO RUN Driver.java BEFORE RUNNING THIS APPLICATION!
 
@@ -19,7 +17,7 @@ public class Main {
 
 	// PUT YOUR PASSWORD HERE
 	static final String PASS = "...";
-	
+
 	private static Connection conn = null;
 	private static Statement statement = null;
 
@@ -313,21 +311,40 @@ public class Main {
 	}
 
 	/**
+	 * Returns set of usernames
+	 */
+	public static Set<String> getAllUsers() {
+		// get all users from db and display in table format.
+		Set<String> usernames = new HashSet<>();
+		try {
+			String selectUsers = "SELECT username FROM User";
+			Statement userStmt = conn.createStatement();
+			ResultSet results = userStmt.executeQuery(selectUsers);
+			while(results.next()) {
+				usernames.add(results.getString("username"));
+			}
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+		return usernames;
+	}
+
+	/**
 	 * displays users who have never made a reservation
 	 */
 	public static void seeNonReservationUsers() {
 		try {
-		String sql =
-		 "SELECT username FROM User T1 WHERE username != ALL ("
-		  + " SELECT username FROM Archive WHERE username = T1.username"
-		  + " UNION SELECT username FROM Reservation WHERE username = T1.username)";
-		Statement userStmt = conn.createStatement();
-		ResultSet results = userStmt.executeQuery(sql);
-		while(results.next()) {
-			String username = results.getString("username");
-        System.out.println("Username: " + username);
-		}
-		adminMenu();
+			String sql =
+			 "SELECT username FROM User T1 WHERE username != ALL ("
+			  + " SELECT username FROM Archive WHERE username = T1.username"
+			  + " UNION SELECT username FROM Reservation WHERE username = T1.username)";
+			Statement userStmt = conn.createStatement();
+			ResultSet results = userStmt.executeQuery(sql);
+			while(results.next()) {
+				String username = results.getString("username");
+				System.out.println("Username: " + username);
+			}
+			adminMenu();
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
@@ -429,7 +446,7 @@ public class Main {
 			System.out.println("N: Delete a reservation");
 			System.out.println("T: Delete a tennis court.");
 			System.out.println("A: Add new tennis court.");
-			System.out.println("P: update price per hour of a recreation center.");
+			System.out.println("P: Update price per hour of a recreation center.");
 			System.out.println("J: See all payments.");
 			System.out.println("I: Archive reservations.");
 			System.out.println("L: Log out.");
@@ -480,7 +497,7 @@ public class Main {
 				System.out.println("??");
 		}
 	}
-	
+
 	public static void callProcedure() throws SQLException {
 		CallableStatement cstmt = conn.prepareCall("{call archive(?)}");
 		Timestamp curentTime = new Timestamp(System.currentTimeMillis());
@@ -562,45 +579,73 @@ public class Main {
 		String name = "";
 		int cost = 0;
 		String method = "";
-		try
-		{
-			System.out.println("Enter payment method: ");
-			method = scanner.nextLine();
+		try {
 			if (isUser) {
 				name = currentUsername;
 			} else {
-				System.out.println("Fill in the username of the user: ");
-				name = scanner.nextLine();
+				Set<String> usernames = getAllUsers();
+				while(!usernames.contains(name)) {
+					System.out.println("Admin please fill in the username of the user: ");
+					name = scanner.nextLine();
+					if (!usernames.contains(name)) System.out.println("Username does not exist");
+				}
 			}
-			System.out.println("courtID: ");
-			ArrayList<Integer> tennisCourtIds = showAllTennisCourts();
-			System.out.println(tennisCourtIds.toString());
-			int courtid = scanner.nextInt();
+
+			while(!(method.equals("American Express") || method.equals("MasterCard") || method.equals("Visa") || method.equals("Discover Card"))) {
+				System.out.println("Enter payment method: (American Express, MasterCard, Visa, or Discover Card)");
+				method = scanner.nextLine();
+			}
+
+			ArrayList<Integer> tennisCourtIds = showAllTennisCourtIds();
+			ArrayList<String> tennisCourtDetails = showAllTennisCourtDetails();
+			int courtid = -1;
 			while (!tennisCourtIds.contains(courtid)) {
-				System.out.println("Invalid tennis court. Please enter one in the list.");
-				System.out.println(tennisCourtIds.toString());
+				System.out.println("Please enter courtID of desired tennis court (Format: courtID, type, hourly rate)");
+				for (String details : tennisCourtDetails) System.out.println(details);
 				courtid = scanner.nextInt();
 			}
 			scanner.nextLine();
 			String rentalPriceSQL = "SELECT rentalPricePerHour FROM RecreationCenter inner join TennisCourt USING (recCenterId) "
-					+ "WHERE TennisCourt.tennisCourtId = " + courtid;
+			 + "WHERE TennisCourt.tennisCourtId = " + courtid;
 			statement = conn.createStatement();
 			int rentalPrice = 0;
 			ResultSet rentalPriceResults = statement.executeQuery(rentalPriceSQL);
 			if (rentalPriceResults.next()) {
 				rentalPrice = rentalPriceResults.getInt(1);
 			}
-			Timestamp startTime = new Timestamp(System.currentTimeMillis());
-			ZonedDateTime zonedDateTime = startTime.toInstant().atZone(ZoneId.of("UTC"));
-			System.out.println("How long for this court (in minutes)?");
-			int time = scanner.nextInt();
-			scanner.nextLine();
-			Timestamp endTime = Timestamp.from(zonedDateTime.plus(time, ChronoUnit.MINUTES).toInstant());
+
+			long days = -1;
+			System.out.println("How many days in advance is the reservation (0 is today)");
+			while(days < 0) {
+				try {
+					days = scanner.nextLong();
+				} catch (InputMismatchException e) { }
+			}
+
+			String time = "";
+			Pattern p = Pattern.compile("^(2[0-3]|[01]?[0-9]):([0-5]?[0-9])$");
+			System.out.println("What time is this reservation (HH:MM)");
+			while(!p.matcher(time).matches()) {
+				time = scanner.nextLine();
+			}
+			int hour = Integer.parseInt(time.substring(0,2));
+			int minute = Integer.parseInt(time.substring(3,5));
+
+			System.out.println("How long is this reservation (in minutes)?");
+
+			long duration = scanner.nextLong();
+
+			ZonedDateTime tempStart = new Timestamp(System.currentTimeMillis())
+			 .toInstant().atZone(ZoneId.of("UTC")).plusDays(days).withHour(hour).withMinute(minute);
+			ZonedDateTime tempEnd = tempStart.plusMinutes(duration);
+			Timestamp startTime = Timestamp.valueOf(tempStart.toLocalDateTime());
+			Timestamp endTime = Timestamp.valueOf(tempEnd.toLocalDateTime());
+
 			boolean isValid = isValidTime(courtid, startTime, endTime);
 			if (isValid) {
 				// calculate cost based on minutes and rental price
-				cost = (int)Math.round(( (double)rentalPrice / 60.0) * (double)time);
-				
+				cost = (int)Math.round(( (double)rentalPrice / 60.0) * (double)duration);
+
 				// insert payment entry first then get the new id and then use it for reservation insertion
 				String insertPayment = "Insert into Payment (cost, method) values (?,?);";
 				PreparedStatement paymentStmt = conn.prepareStatement(insertPayment, Statement.RETURN_GENERATED_KEYS);
@@ -612,7 +657,7 @@ public class Main {
 					paymentId = generatedKeys.getInt(1);
 				}
 				String reservation = "INSERT INTO Reservation(username, tennisCourtId, paymentId, reservationTimeStart, reservationTimeEnd, updateAt) "
-						+ "VALUES (?,?,?,?,?,?);";
+				 + "VALUES (?,?,?,?,?,?);";
 				PreparedStatement resStmt = conn.prepareStatement(reservation);
 				resStmt.setString(1, name);
 				resStmt.setInt(2, courtid);
@@ -775,12 +820,12 @@ public class Main {
 		try {
 			String sql =
 			 "SELECT name, RecreationCenter.recCenterId\n"
-			 + "FROM Reservation \n"
-			 + "INNER JOIN TennisCourt USING(tennisCourtId)\n"
-			 + "RIGHT JOIN RecreationCenter \n"
-			 + "ON RecreationCenter.recCenterId = TennisCourt.recCenterId\n"
-			 + "GROUP BY RecreationCenter.recCenterId, RecreationCenter.recCenterId\n"
-			 + "HAVING count(Reservation.reservationId) = 0\n";
+			  + "FROM Reservation \n"
+			  + "INNER JOIN TennisCourt USING(tennisCourtId)\n"
+			  + "RIGHT JOIN RecreationCenter \n"
+			  + "ON RecreationCenter.recCenterId = TennisCourt.recCenterId\n"
+			  + "GROUP BY RecreationCenter.recCenterId\n"
+			  + "HAVING count(Reservation.reservationId) = 0\n";
 			statement = conn.createStatement();
 			ResultSet rcResults = statement.executeQuery(sql);
 			while(rcResults.next()) {
@@ -789,7 +834,7 @@ public class Main {
 				 .append(rcResults.getString("recCenterId"))
 				 .append(", Recreation Center Name: ")
 				 .append(rcResults.getString("name"));
-        		System.out.println(sb.toString());
+				System.out.println(sb.toString());
 			}
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
@@ -835,16 +880,16 @@ public class Main {
 		}
 		return tennisCourtIds;
 	}
-	
+
 	/**
-	 * helper method to check if a reservation that is about to be made does not overlap with other times 
+	 * helper method to check if a reservation that is about to be made does not overlap with other times
 	 * @return
 	 */
 	public static boolean isValidTime(int tennisCourtId, Timestamp startTime, Timestamp endTime) {
 		boolean isValid = false;
 		try {
 			String stmt = "SELECT count(*) FROM Reservation WHERE reservationTimeStart < ? AND (reservationTimeEnd < ? or "
-					+ "reservationTimeEnd > ?) and tennisCourtId = ?;";
+			 + "reservationTimeEnd > ?) and tennisCourtId = ?;";
 			PreparedStatement statement = conn.prepareStatement(stmt);
 			statement.setTimestamp(1,  startTime);
 			statement.setTimestamp(2,  endTime);
@@ -862,11 +907,11 @@ public class Main {
 		}
 		return isValid;
 	}
-	
+
 	/**
 	 * helper method to get all the tennis court ids in the database
 	 */
-	public static ArrayList<Integer> showAllTennisCourts() {
+	public static ArrayList<Integer> showAllTennisCourtIds() {
 		ArrayList<Integer> tennisCourtIds = new ArrayList<>();
 		try {
 			String tennisCourtStmt = "SELECT tennisCourtId FROM tennisCourt;";
@@ -879,5 +924,30 @@ public class Main {
 			System.out.println(e.getMessage());
 		}
 		return tennisCourtIds;
+	}
+
+	/**
+	 * helper method to get all the tennis court details (id, type, price)
+	 */
+	public static ArrayList<String> showAllTennisCourtDetails() {
+		ArrayList<String> tennisCourts = new ArrayList<>();
+		try {
+			String tennisCourtStmt = "SELECT tennisCourtId, type, rentalPricePerHour FROM "
+			 + "tennisCourt INNER JOIN RecreationCenter USING(recCenterId) ORDER BY tennisCourtId";
+			statement = conn.createStatement();
+			ResultSet tennisResults = statement.executeQuery(tennisCourtStmt);
+			while (tennisResults.next()) {
+				StringBuilder sb = new StringBuilder()
+				 .append("(")
+				 .append(tennisResults.getInt("tennisCourtId"))
+				 .append(", ").append(tennisResults.getString("type"))
+				 .append(", $").append(tennisResults.getInt("rentalPricePerHour"))
+				 .append(")");
+				tennisCourts.add(sb.toString());
+			}
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+		return tennisCourts;
 	}
 }
