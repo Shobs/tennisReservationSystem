@@ -24,3 +24,6 @@
 ### 6. Test the program
 - Our application has regular users and admin users. Depending on what you login as, the menu will be different
     - You can sign in as any of the users in our database. Check the contents of `User` to see example users and their passwords
+    - To make it easier, here are the login info for a user and an admin.
+        - Admin: `username: chet02`, `password: eef33629fbaf0ed286c989c70d652c38d3971111`
+        - User: `username: alysson.lowe`, `password: 8c26182707bd50e1d84ecf0754dd341897c2931d`
