@@ -560,12 +560,12 @@ public class Main {
 				String method = rs.getString("method");
 				System.out.println(
 				 "Method: " + rs.getString("method") + ", "
-				 + "Cost: " + rs.getInt("cost") + ", "
-				 + "User: " + rs.getString("username") + ", "
-				+ "Tennis Court - Recreation Center: " + rs.getString("tennisCourtId")
-				+ "-" + rs.getString("name")  + ", "
-				+ "Date: " + rs.getString("reservationTimeStart")
-				+ "-" + rs.getString("reservationTimeStart"));
+				  + "Cost: " + rs.getInt("cost") + ", "
+				  + "User: " + rs.getString("username") + ", "
+				  + "Tennis Court - Recreation Center: " + rs.getString("tennisCourtId")
+				  + "-" + rs.getString("name")  + ", "
+				  + "Date: " + rs.getString("reservationTimeStart")
+				  + "-" + rs.getString("reservationTimeStart"));
 			}
 		}
 		catch(SQLException e)
@@ -891,24 +891,23 @@ public class Main {
 
 	/**
 	 * helper method to check if a reservation that is about to be made does not overlap with other times
+	 * (StartDate1 <= EndDate2) and (EndDate1 >= StartDate2)
 	 * @return
 	 */
 	public static boolean isValidTime(int tennisCourtId, Timestamp startTime, Timestamp endTime) {
 		boolean isValid = false;
 		try {
-			String stmt = "SELECT count(*) FROM Reservation WHERE reservationTimeStart < ? AND (reservationTimeEnd < ? or "
-			 + "reservationTimeEnd > ?) and tennisCourtId = ?;";
+			String stmt = "SELECT count(*) FROM Reservation WHERE reservationTimeStart < ? AND reservationTimeEnd > ? and tennisCourtId = ?";
 			PreparedStatement statement = conn.prepareStatement(stmt);
-			statement.setTimestamp(1,  startTime);
-			statement.setTimestamp(2,  endTime);
-			statement.setTimestamp(3, endTime);
-			statement.setInt(4, tennisCourtId);
+			statement.setTimestamp(1,  endTime);
+			statement.setTimestamp(2,  startTime);
+			statement.setInt(3, tennisCourtId);
 			ResultSet set = statement.executeQuery();
 			if (set.next()) {
 				/*
 				 * 0 means that there are no reservations that are within the start/end time (which is valid)
 				 */
-				isValid = set.getInt(1) == 0 ? true : false;
+				isValid = set.getInt(1) == 0;
 			}
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
