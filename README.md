@@ -1,5 +1,6 @@
 # Awesome Tennis Reservation System
 *Tennis Reservation System application built using Java (JDBC) and MySQL.*
+*Kenny Huynh, John Tran, Hiep Tran, Jean Marcellin*
 ## Instructions:
 
 ### 1. Make sure you have Java and MySQL installed
