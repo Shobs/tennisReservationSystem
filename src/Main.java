@@ -543,22 +543,29 @@ public class Main {
 	}
 
 	/**
-	 * see all the payments that users been using when making a reservation
+	 * See all the payments that users been using when making a reservation
 	 * @throws SQLException
 	 */
 	public static void seeAllPayments() throws SQLException
 	{
 		try
 		{
-			String rec = "SELECT * from Payment;";
+			String rec = "SELECT * from Payment INNER JOIN Reservation USING(paymentID)"
+			 + "INNER JOIN TennisCourt USING(tennisCourtId) INNER JOIN RecreationCenter "
+			 + "USING(recCenterId)";
 			statement = conn.createStatement();
 			ResultSet rs = statement.executeQuery(rec);
 			while(rs.next())
 			{
-				int id = rs.getInt("paymentId");
-				int cost = rs.getInt("cost");
 				String method = rs.getString("method");
-				System.out.println("PaymentID: " + id + "\tCost: " + cost + "\tMethod: " + method);
+				System.out.println(
+				 "Method: " + rs.getString("method") + ", "
+				  + "Cost: " + rs.getInt("cost") + ", "
+				  + "User: " + rs.getString("username") + ", "
+				  + "Tennis Court - Recreation Center: " + rs.getString("tennisCourtId")
+				  + "-" + rs.getString("name")  + ", "
+				  + "Date: " + rs.getString("reservationTimeStart")
+				  + "-" + rs.getString("reservationTimeStart"));
 			}
 		}
 		catch(SQLException e)
@@ -636,8 +643,9 @@ public class Main {
 			long duration = scanner.nextLong();
 
 			ZonedDateTime tempStart = new Timestamp(System.currentTimeMillis())
-			 .toInstant().atZone(ZoneId.of("UTC")).plusDays(days).withHour(hour).withMinute(minute);
-			ZonedDateTime tempEnd = tempStart.plusMinutes(duration);
+			 .toInstant().atZone(ZoneId.of("UTC")).plusDays(days).withHour(hour).withMinute
+			  (minute).withSecond(0).withNano(0);
+			ZonedDateTime tempEnd = tempStart.plusMinutes(duration).withSecond(0).withNano(0);
 			Timestamp startTime = Timestamp.valueOf(tempStart.toLocalDateTime());
 			Timestamp endTime = Timestamp.valueOf(tempEnd.toLocalDateTime());
 
@@ -669,7 +677,7 @@ public class Main {
 				System.out.println("A reservation just made.");
 			} else {
 				System.out.println("ERROR: There is already a reservation made between the times you entered.");
-				System.out.println("Please try again later.");
+				System.out.println("Please use a different date");
 			}
 		}
 		catch(SQLException e)
@@ -883,24 +891,23 @@ public class Main {
 
 	/**
 	 * helper method to check if a reservation that is about to be made does not overlap with other times
+	 * (StartDate1 <= EndDate2) and (EndDate1 >= StartDate2)
 	 * @return
 	 */
 	public static boolean isValidTime(int tennisCourtId, Timestamp startTime, Timestamp endTime) {
 		boolean isValid = false;
 		try {
-			String stmt = "SELECT count(*) FROM Reservation WHERE reservationTimeStart < ? AND (reservationTimeEnd < ? or "
-			 + "reservationTimeEnd > ?) and tennisCourtId = ?;";
+			String stmt = "SELECT count(*) FROM Reservation WHERE reservationTimeStart < ? AND reservationTimeEnd > ? and tennisCourtId = ?";
 			PreparedStatement statement = conn.prepareStatement(stmt);
-			statement.setTimestamp(1,  startTime);
-			statement.setTimestamp(2,  endTime);
-			statement.setTimestamp(3, endTime);
-			statement.setInt(4, tennisCourtId);
+			statement.setTimestamp(1,  endTime);
+			statement.setTimestamp(2,  startTime);
+			statement.setInt(3, tennisCourtId);
 			ResultSet set = statement.executeQuery();
 			if (set.next()) {
 				/*
 				 * 0 means that there are no reservations that are within the start/end time (which is valid)
 				 */
-				isValid = set.getInt(1) == 0 ? true : false;
+				isValid = set.getInt(1) == 0;
 			}
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
