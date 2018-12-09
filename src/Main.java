@@ -643,8 +643,9 @@ public class Main {
 			long duration = scanner.nextLong();
 
 			ZonedDateTime tempStart = new Timestamp(System.currentTimeMillis())
-			 .toInstant().atZone(ZoneId.of("UTC")).plusDays(days).withHour(hour).withMinute(minute);
-			ZonedDateTime tempEnd = tempStart.plusMinutes(duration);
+			 .toInstant().atZone(ZoneId.of("UTC")).plusDays(days).withHour(hour).withMinute
+			  (minute).withSecond(0).withNano(0);
+			ZonedDateTime tempEnd = tempStart.plusMinutes(duration).withSecond(0).withNano(0);
 			Timestamp startTime = Timestamp.valueOf(tempStart.toLocalDateTime());
 			Timestamp endTime = Timestamp.valueOf(tempEnd.toLocalDateTime());
 
