@@ -543,22 +543,29 @@ public class Main {
 	}
 
 	/**
-	 * see all the payments that users been using when making a reservation
+	 * See all the payments that users been using when making a reservation
 	 * @throws SQLException
 	 */
 	public static void seeAllPayments() throws SQLException
 	{
 		try
 		{
-			String rec = "SELECT * from Payment;";
+			String rec = "SELECT * from Payment INNER JOIN Reservation USING(paymentID)"
+			 + "INNER JOIN TennisCourt USING(tennisCourtId) INNER JOIN RecreationCenter "
+			 + "USING(recCenterId)";
 			statement = conn.createStatement();
 			ResultSet rs = statement.executeQuery(rec);
 			while(rs.next())
 			{
-				int id = rs.getInt("paymentId");
-				int cost = rs.getInt("cost");
 				String method = rs.getString("method");
-				System.out.println("PaymentID: " + id + "\tCost: " + cost + "\tMethod: " + method);
+				System.out.println(
+				 "Method: " + rs.getString("method") + ", "
+				 + "Cost: " + rs.getInt("cost") + ", "
+				 + "User: " + rs.getString("username") + ", "
+				+ "Tennis Court - Recreation Center: " + rs.getString("tennisCourtId")
+				+ "-" + rs.getString("name")  + ", "
+				+ "Date: " + rs.getString("reservationTimeStart")
+				+ "-" + rs.getString("reservationTimeStart"));
 			}
 		}
 		catch(SQLException e)
@@ -669,7 +676,7 @@ public class Main {
 				System.out.println("A reservation just made.");
 			} else {
 				System.out.println("ERROR: There is already a reservation made between the times you entered.");
-				System.out.println("Please try again later.");
+				System.out.println("Please use a different date");
 			}
 		}
 		catch(SQLException e)
