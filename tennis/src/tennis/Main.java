@@ -310,6 +310,25 @@ public class Main {
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
+  }
+  
+  /**
+	 * Returns set of usernames
+	 */
+	public static Set<String> getAllUsers() {
+		// get all users from db and display in table format.
+		Set<String> usernames = new HashSet<>();
+		try {
+			String selectUsers = "SELECT username FROM User";
+			Statement userStmt = conn.createStatement();
+			ResultSet results = userStmt.executeQuery(selectUsers);
+			while(results.next()) {
+				usernames.add(results.getString("username"));
+			}
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+		return usernames;
 	}
 
 	/**
