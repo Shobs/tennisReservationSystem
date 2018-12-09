@@ -4,8 +4,8 @@ import java.util.*;
 import java.sql.Timestamp;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.sql.*;
+import java.util.regex.Pattern;
 
 // MAKE SURE TO RUN Driver.java BEFORE RUNNING THIS APPLICATION!
 
@@ -615,16 +615,38 @@ public class Main {
 			if (rentalPriceResults.next()) {
 				rentalPrice = rentalPriceResults.getInt(1);
 			}
-			Timestamp startTime = new Timestamp(System.currentTimeMillis());
-			ZonedDateTime zonedDateTime = startTime.toInstant().atZone(ZoneId.of("UTC"));
-			System.out.println("How long for this court (in minutes)?");
-			int time = scanner.nextInt();
-			scanner.nextLine();
-			Timestamp endTime = Timestamp.from(zonedDateTime.plus(time, ChronoUnit.MINUTES).toInstant());
+
+			long days = -1;
+			System.out.println("How many days in advance is the reservation (0 is today)");
+			while(days < 0) {
+				try {
+					days = scanner.nextLong();
+				} catch (InputMismatchException e) { }
+			}
+
+			String time = "";
+			Pattern p = Pattern.compile("^(2[0-3]|[01]?[0-9]):([0-5]?[0-9])$");
+			System.out.println("What time is this reservation (HH:MM)");
+			while(!p.matcher(time).matches()) {
+				time = scanner.nextLine();
+			}
+			int hour = Integer.parseInt(time.substring(0,2));
+			int minute = Integer.parseInt(time.substring(3,5));
+
+			System.out.println("How long is this reservation (in minutes)?");
+
+			long duration = scanner.nextLong();
+
+			ZonedDateTime tempStart = new Timestamp(System.currentTimeMillis())
+			 .toInstant().atZone(ZoneId.of("UTC")).plusDays(days).withHour(hour).withMinute(minute);
+			ZonedDateTime tempEnd = tempStart.plusMinutes(duration);
+			Timestamp startTime = Timestamp.valueOf(tempStart.toLocalDateTime());
+			Timestamp endTime = Timestamp.valueOf(tempEnd.toLocalDateTime());
+
 			boolean isValid = isValidTime(courtid, startTime, endTime);
 			if (isValid) {
 				// calculate cost based on minutes and rental price
-				cost = (int)Math.round(( (double)rentalPrice / 60.0) * (double)time);
+				cost = (int)Math.round(((double)rentalPrice / 60.0) * (double)duration);
 
 				// insert payment entry first then get the new id and then use it for reservation insertion
 				String insertPayment = "Insert into Payment (cost, method) values (?,?);";
