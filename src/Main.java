@@ -1,5 +1,3 @@
-package tennis;
-
 import java.util.*;
 import java.sql.Timestamp;
 import java.time.ZoneId;
@@ -646,7 +644,7 @@ public class Main {
 			boolean isValid = isValidTime(courtid, startTime, endTime);
 			if (isValid) {
 				// calculate cost based on minutes and rental price
-				cost = (int)Math.round(((double)rentalPrice / 60.0) * (double)duration);
+				cost = (int)Math.round(( (double)rentalPrice / 60.0) * (double)duration);
 
 				// insert payment entry first then get the new id and then use it for reservation insertion
 				String insertPayment = "Insert into Payment (cost, method) values (?,?);";
