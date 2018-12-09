@@ -261,9 +261,4 @@ public class Driver {
 		System.out.println("created archive procedure!");
 		
 	}
-	
-	private static void createInitialDataSet() throws SQLException
-	{
-		
-	}
 }

@@ -429,7 +429,7 @@ public class Main {
 			System.out.println("N: Delete a reservation");
 			System.out.println("T: Delete a tennis court.");
 			System.out.println("A: Add new tennis court.");
-			System.out.println("P: update price per hour of a recreation center.");
+			System.out.println("P: Update price per hour of a recreation center.");
 			System.out.println("J: See all payments.");
 			System.out.println("I: Archive reservations.");
 			System.out.println("L: Log out.");
@@ -779,7 +779,7 @@ public class Main {
 			 + "INNER JOIN TennisCourt USING(tennisCourtId)\n"
 			 + "RIGHT JOIN RecreationCenter \n"
 			 + "ON RecreationCenter.recCenterId = TennisCourt.recCenterId\n"
-			 + "GROUP BY RecreationCenter.recCenterId, RecreationCenter.recCenterId\n"
+			 + "GROUP BY RecreationCenter.recCenterId\n"
 			 + "HAVING count(Reservation.reservationId) = 0\n";
 			statement = conn.createStatement();
 			ResultSet rcResults = statement.executeQuery(sql);
